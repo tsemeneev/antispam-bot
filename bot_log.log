@@ -1,0 +1,25 @@
+ERROR:TeleBot:Infinity polling exception: list index out of range
+ERROR:TeleBot:Exception traceback:
+Traceback (most recent call last):
+  File "/home/tim/code/Antispam (3 versions)/foto/.venv/lib/python3.12/site-packages/telebot/__init__.py", line 1110, in infinity_polling
+    self.polling(non_stop=True, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "/home/tim/code/Antispam (3 versions)/foto/.venv/lib/python3.12/site-packages/telebot/__init__.py", line 1198, in polling
+    self.__threaded_polling(non_stop=non_stop, interval=interval, timeout=timeout, long_polling_timeout=long_polling_timeout,
+  File "/home/tim/code/Antispam (3 versions)/foto/.venv/lib/python3.12/site-packages/telebot/__init__.py", line 1273, in __threaded_polling
+    raise e
+  File "/home/tim/code/Antispam (3 versions)/foto/.venv/lib/python3.12/site-packages/telebot/__init__.py", line 1235, in __threaded_polling
+    self.worker_pool.raise_exceptions()
+  File "/home/tim/code/Antispam (3 versions)/foto/.venv/lib/python3.12/site-packages/telebot/util.py", line 150, in raise_exceptions
+    raise self.exception_info
+  File "/home/tim/code/Antispam (3 versions)/foto/.venv/lib/python3.12/site-packages/telebot/util.py", line 93, in run
+    task(*args, **kwargs)
+  File "/home/tim/code/Antispam (3 versions)/foto/.venv/lib/python3.12/site-packages/telebot/__init__.py", line 9040, in _run_middlewares_and_handler
+    result = handler['function'](message)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/tim/code/Antispam (3 versions)/foto/bot.py", line 205, in add_chat
+    add_main_chat_to_list(message.text.split(','))
+  File "/home/tim/code/Antispam (3 versions)/foto/keyboards.py", line 83, in add_main_chat_to_list
+    "id": chat[1].strip()
+          ~~~~^^^
+IndexError: list index out of range
+

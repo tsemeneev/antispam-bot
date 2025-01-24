@@ -1,29 +1,47 @@
 import time
 import requests
+import json
 from telebot import TeleBot
 from telebot import StateMemoryStorage, types
 from keyboards import (TelegramBot, add_admin_id, add_channel_to_list, add_main_chat_to_list, admin_kb, 
     change_follow_channels_kb, change_follow_text_kb, change_log_chat_kb, change_main_chat_kb, delete_admin_id, delete_admins_kb, 
     delete_channel_from_list, delete_channels_kb, delete_main_chat_from_list, delete_main_chat_kb, get_admin_ids, get_list_channels, get_main_chats, get_text, 
     list_channels_kb, list_main_chats_kb, menu_kb, set_text)
-from utils import (check_frod, check_hidden_text, check_multifrod,
-            check_spam_base, check_urls, delete_msg_from_file, get_check_follow_channels, get_log_chat_id, get_update_spam_base, load_entities_from_json_file, save_entities_to_json_file, send_follow_message, set_log_chat_id, write_msg)
+from utils import (check_hidden_text, check_multifrod, check_spam_base, check_urls, click_frod, click_hidden_text, click_resend, click_spam_base, 
+                   click_text_check_count, click_urls, get_log_chat_id, get_update_spam_base, load_entities_from_json_file, 
+                   save_entities_to_json_file, set_log_chat_id, get_check_follow_channels, send_follow_message, check_frod, delete_msg_from_file, write_msg)
 import logging
 
 logging.basicConfig(filename='bot_log.log', level=logging.INFO)
 
 
-# Ссылка на спам базу: https://www.npoint.io/docs/aab91686ac4741cc778b
+# Ссылка на спам базу: https://www.npoint.io/docs/83984c40d18c30a0ced7
 storage = StateMemoryStorage()
-bot = TeleBot('6499941275:AAGy0nmX8iqjkQao2rK2hEva-lLPA6q5hqo', state_storage=storage)
+bot = TeleBot('7113011095:AAHPiIoO6S9Dk4PURppX9lWKtyZZuir0tYc', state_storage=storage)
+
 sp_bot = TelegramBot()
+
+with open('admin_data.json', 'r', encoding='utf-8') as f:
+    data = json.load(f)
+    sp_bot.spam_base = bool(data[0]['spam_base_'])
+    sp_bot.frod = bool(data[0]['frod'])
+    sp_bot.hidden_text = bool(data[0]['hidden_text'])
+    sp_bot.urls = bool(data[0]['urls'])
+    sp_bot.resend = bool(data[0]['resend'])
+    sp_bot.text_check_count = int(data[0]['text_check_count'])
+    
 
 
 
 def delete_msg(message: types.Message, filter_name: str) -> None:
-    bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
-    send_log_message(message, filter_name)
+    try:
+        bot.delete_message(chat_id=message.chat.id, message_id=message.message_id)
+        print(f'Удалено сообщение из чата {message.chat.username}')
+        send_log_message(message, filter_name)
+    except:
+        print(f'!!! Сообщение не удалено из чата {message.chat.username}')
     
+
 def delete_msg_frod(chat_id: int, message_id: int) -> None:
     try:
         bot.delete_message(chat_id=chat_id, message_id=message_id)
@@ -69,7 +87,7 @@ def menu(call):
 @bot.message_handler(commands=['update'])
 def update_spam_base(message):
     if message.from_user.id in get_admin_ids():
-        res = requests.get('https://api.npoint.io/aab91686ac4741cc778b').json()
+        res = requests.get('https://api.npoint.io/83984c40d18c30a0ced7').json()
         get_update_spam_base(res['spam_base'])
         bot.reply_to(message, 'База обновлена') 
         
@@ -77,10 +95,12 @@ def update_spam_base(message):
 def spam_base(call):
     if sp_bot.spam_base == True:
         sp_bot.spam_base = False
+        click_spam_base(0)        
         bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
                               message_id=call.message.message_id, inline_message_id=call.inline_message_id, reply_markup=menu_kb(sp_bot=sp_bot))
     else:
         sp_bot.spam_base = True
+        click_spam_base(1)
         bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
                               message_id=call.message.message_id, reply_markup=menu_kb(sp_bot=sp_bot), inline_message_id=call.inline_message_id)
 
@@ -88,34 +108,26 @@ def spam_base(call):
 def frod(call):
     if sp_bot.frod == True:
         sp_bot.frod = False
+        click_frod(0)
         bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
                               message_id=call.message.message_id, inline_message_id=call.inline_message_id, reply_markup=menu_kb(sp_bot=sp_bot))
     else:
         sp_bot.frod = True
+        click_frod(1)
         bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
                               message_id=call.message.message_id, reply_markup=menu_kb(sp_bot=sp_bot), inline_message_id=call.inline_message_id)
 
-
-
-@bot.callback_query_handler(func=lambda call: call.data == 'multifrod')
-def multifrod(call):
-    if sp_bot.multifrod == True:
-        sp_bot.multifrod = False
-        bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
-                              message_id=call.message.message_id, inline_message_id=call.inline_message_id, reply_markup=menu_kb(sp_bot=sp_bot))
-    else:
-        sp_bot.multifrod = True
-        bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
-                              message_id=call.message.message_id, reply_markup=menu_kb(sp_bot=sp_bot), inline_message_id=call.inline_message_id)
 
 @bot.callback_query_handler(func=lambda call: call.data == 'resend')
 def resend(call):
     if sp_bot.resend == True:
         sp_bot.resend = False
+        click_resend(0)
         bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
                               message_id=call.message.message_id, inline_message_id=call.inline_message_id, reply_markup=menu_kb(sp_bot=sp_bot))
     else:
         sp_bot.resend = True
+        click_resend(1)
         bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
                               message_id=call.message.message_id, reply_markup=menu_kb(sp_bot=sp_bot), inline_message_id=call.inline_message_id)
 
@@ -124,10 +136,12 @@ def resend(call):
 def urls(call):
     if sp_bot.urls == True:
         sp_bot.urls = False
+        click_urls(0)
         bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
                               message_id=call.message.message_id, inline_message_id=call.inline_message_id, reply_markup=menu_kb(sp_bot=sp_bot))
     else:
         sp_bot.urls = True
+        click_urls(1)
         bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
                               message_id=call.message.message_id, reply_markup=menu_kb(sp_bot=sp_bot), inline_message_id=call.inline_message_id)
         
@@ -135,10 +149,12 @@ def urls(call):
 def hidden_text(call):
     if sp_bot.hidden_text == True:
         sp_bot.hidden_text = False
+        click_hidden_text(0)
         bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
                               message_id=call.message.message_id, inline_message_id=call.inline_message_id, reply_markup=menu_kb(sp_bot=sp_bot))
     else:
         sp_bot.hidden_text = True
+        click_hidden_text(1)
         bot.edit_message_text(chat_id=call.message.chat.id, text='Активируйте нужные опции',
                               message_id=call.message.message_id, reply_markup=menu_kb(sp_bot=sp_bot), inline_message_id=call.inline_message_id)
 
@@ -155,6 +171,7 @@ def text_check_count(message):
         bot.send_message(message.chat.id, 'Это не число. Попробуйте ещё раз')
         return
     sp_bot.text_check_count = int(message.text.strip())
+    click_text_check_count(sp_bot.text_check_count)
     bot.send_message(chat_id=message.chat.id, text='Активируйте нужные опции', reply_markup=menu_kb(sp_bot=sp_bot))
     bot.delete_state(message.from_user.id, message.chat.id)
     
@@ -178,8 +195,8 @@ def list_main_chats(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'add_main_chat')
 def add_main_chat(call):
     bot.edit_message_text(chat_id=call.message.chat.id, 
-                          text='Введите название и юзернэйм нового чата\nНапример: Название канала, @my_chat', 
-                          message_id=call.message.message_id)
+                            text='Введите название и юзернэйм нового чата\nНапример: Название канала, @my_chat', 
+                            message_id=call.message.message_id)
     bot.set_state(call.from_user.id, 'add_chat', call.message.chat.id)
     
     
@@ -200,12 +217,8 @@ def delete_chat(call):
 def delete_chat(call):
     delete_main_chat_from_list(call.data)
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Чат удален', reply_markup=delete_main_chat_kb(get_main_chats()))
-   
-    
-    
-    
-    
-    
+
+
 @bot.callback_query_handler(func=lambda call: call.data == 'list_channels')
 def list_channels(call):
     channels_list = get_list_channels()
@@ -215,14 +228,14 @@ def list_channels(call):
 @bot.callback_query_handler(func=lambda call: call.data == 'add_channel')
 def add_channel(call):
     bot.edit_message_text(chat_id=call.message.chat.id, 
-                          text='Введите юзернейм и id нового канала\nНапример: @my_channel, -100123456789', 
+                          text='Введите юзернейм нового канала\nНапример: @my_channel', 
                           message_id=call.message.message_id)
     bot.set_state(call.from_user.id, 'add_channel', call.message.chat.id)
     
     
 @bot.message_handler(func=lambda message: bot.get_state(message.from_user.id, message.chat.id) == 'add_channel')
 def add_channel(message):
-    add_channel_to_list(message.text.split(','))
+    add_channel_to_list(message.text.strip(), bot)
     bot.send_message(chat_id=message.chat.id, text='Канал добавлен')
     bot.send_message(chat_id=message.chat.id, text='Выберите действие', reply_markup=change_follow_channels_kb())
     bot.delete_state(message.from_user.id, message.chat.id)
@@ -234,7 +247,7 @@ def delete_channel(call):
     
 
 @bot.callback_query_handler(func=lambda call: 'delete_channel' in call.data)
-def delete_channel(call):
+def delete_channel(call):    
     delete_channel_from_list(call.data)
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text='Канал удален', reply_markup=delete_channels_kb(get_list_channels()))
 
@@ -265,31 +278,31 @@ def add_admin(message):
 @bot.callback_query_handler(func=lambda call: call.data == 'del_admin')
 def del_admin(call):
     bot.edit_message_text(chat_id=call.message.chat.id, 
-                          message_id=call.message.message_id, 
-                          text='Выберите администратора для удаления', 
-                          reply_markup=delete_admins_kb(get_admin_ids()))
+                        message_id=call.message.message_id, 
+                        text='Выберите администратора для удаления', 
+                        reply_markup=delete_admins_kb(get_admin_ids()))
     bot.set_state(call.from_user.id, 'add_admin', call.message.chat.id)
     
 @bot.callback_query_handler(func=lambda call: 'delete_admin' in call.data)
 def del_admin(call):
     delete_admin_id(call.data)
     bot.edit_message_text(chat_id=call.message.chat.id, 
-                          message_id=call.message.message_id, 
-                          text='Администратор удален', 
-                          reply_markup=delete_admins_kb(get_admin_ids()))
+                        message_id=call.message.message_id, 
+                        text='Администратор удален', 
+                        reply_markup=delete_admins_kb(get_admin_ids()))
     
 @bot.callback_query_handler(func=lambda call: call.data == 'check_follow_text')
 def check_follow_text(call):
     bot.edit_message_text(chat_id=call.message.chat.id, 
-                          message_id=call.message.message_id, 
-                          text='Выберите действие', 
-                          reply_markup=change_follow_text_kb())
+                        message_id=call.message.message_id, 
+                        text='Выберите действие', 
+                        reply_markup=change_follow_text_kb())
     
 @bot.callback_query_handler(func=lambda call: call.data == 'change_text')
 def change_text(call):
     bot.edit_message_text(chat_id=call.message.chat.id, 
-                          message_id=call.message.message_id, 
-                          text='Введите и отправьте новый текст')
+                        message_id=call.message.message_id, 
+                        text='Введите и отправьте новый текст')
     bot.set_state(call.from_user.id, 'change_text', call.message.chat.id)
     
 @bot.message_handler(func=lambda message: bot.get_state(message.from_user.id, message.chat.id) == 'change_text')
@@ -307,21 +320,21 @@ def view_text(call):
     
     bot.edit_message_text(chat_id=call.message.chat.id,message_id=call.message.message_id, text=get_text(), entities=entities)
     bot.send_message(chat_id=call.message.chat.id,
-                          text='Выберите действие', 
-                          reply_markup=change_follow_text_kb())
+                        text='Выберите действие', 
+                        reply_markup=change_follow_text_kb())
 
 @bot.callback_query_handler(func=lambda call: call.data == 'change_log_chat')
 def change_log_chat(call):
     bot.edit_message_text(chat_id=call.message.chat.id, 
-                          message_id=call.message.message_id, 
-                          text='Выберите действие',
-                          reply_markup=change_log_chat_kb())
+                        message_id=call.message.message_id, 
+                        text='Выберите действие',
+                        reply_markup=change_log_chat_kb())
 
 @bot.callback_query_handler(func=lambda call: call.data == 'change_log_chat_id')
 def change_log_chat(call):
     bot.edit_message_text(chat_id=call.message.chat.id, 
-                          message_id=call.message.message_id, 
-                          text='Введите и отправьте новый id чата для логов')
+                        message_id=call.message.message_id, 
+                        text='Введите и отправьте новый id чата для логов')
     bot.set_state(call.from_user.id, 'change_log_chat_id', call.message.chat.id)
     
 @bot.message_handler(func=lambda message: bot.get_state(message.from_user.id, message.chat.id) == 'change_log_chat_id')
@@ -330,12 +343,12 @@ def change_log_chat_id(message):
     bot.send_message(chat_id=message.chat.id, text='Лог чата изменен')
     bot.send_message(chat_id=message.chat.id, text='Выберите действие', reply_markup=change_log_chat_kb())
     bot.delete_state(message.from_user.id, message.chat.id)
-    
 
 
 
 @bot.message_handler(content_types=['text', 'photo'])
 def in_message(message):
+    print(message.chat.type)
     main_chats = [chat['id'][1:] for chat in get_main_chats()]
     
     if message.chat.username in main_chats:
@@ -355,24 +368,24 @@ def in_message(message):
                 if message.forward_from or message.forward_from_chat:
                     delete_msg(message, 'Пересылка')
                     return
-            if sp_bot.frod == True:
-                if len(message.text) > sp_bot.text_check_count:
-                    messages = check_frod(message)
-                    if messages:
-                        for msg in messages:
-                            delete_msg_frod(msg['chat_id'], msg['message_id'])
-                        delete_msg_from_file(messages)
-                        delete_msg(message, 'Рассылка')
-                        return
-            if sp_bot.multifrod == True:
-                if len(message.text) > sp_bot.text_check_count:
-                    messages = check_multifrod(message)
-                    if messages:
-                        for msg in messages:
-                            delete_msg_frod(msg['chat_id'], msg['message_id'])
-                        delete_msg_from_file(messages)
-                        delete_msg(message, 'Рассылка с разных аккаунтов')
-                        return
+            # if sp_bot.frod == True:
+            #     if len(message.text) > sp_bot.text_check_count:
+            #         messages = check_frod(message)
+            #         if messages:
+            #             for msg in messages:
+            #                 delete_msg_frod(msg['chat_id'], msg['message_id'])
+            #             delete_msg_from_file(messages)
+            #             delete_msg(message, 'Рассылка')
+            #             return
+            # if sp_bot.multifrod == True:
+            #     if len(message.text) > sp_bot.text_check_count:
+            #         messages = check_multifrod(message)
+            #         if messages:
+            #             for msg in messages:
+            #                 delete_msg_frod(msg['chat_id'], msg['message_id'])
+            #             delete_msg_from_file(messages)
+            #             delete_msg(message, 'Рассылка с разных аккаунтов')
+            #             return
             if sp_bot.urls == True:
                 if check_urls(message):
                     delete_msg(message, 'Ссылки')
@@ -393,3 +406,4 @@ if __name__ == '__main__':
         except Exception as e:
             print(e)
             time.sleep(3)
+            continue

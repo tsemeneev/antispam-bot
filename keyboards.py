@@ -32,8 +32,8 @@ def menu_kb(sp_bot: TelegramBot) -> InlineKeyboardMarkup:
     hidden_text = '✅' if sp_bot.hidden_text else '❌'
     keyb = InlineKeyboardMarkup(row_width=1)
     keyb.add(InlineKeyboardButton(f'Спам база({spam_base})', callback_data='spam_base'),
-                InlineKeyboardButton(f'Рассылка({frod})', callback_data='frod'),
-                InlineKeyboardButton(f'Рассылка с разных аккаунтов({multifrod})', callback_data='multifrod'),
+                # InlineKeyboardButton(f'Рассылка({frod})', callback_data='frod'),
+                # InlineKeyboardButton(f'Рассылка с разных аккаунтов({multifrod})', callback_data='multifrod'),
                 InlineKeyboardButton(f'Пересланные сообщения({resend})', callback_data='resend'),
                 InlineKeyboardButton(f'Ссылки({urls})', callback_data='urls'),
                 InlineKeyboardButton(f'Скрытый текст({hidden_text})', callback_data='hidden_text'),
@@ -41,7 +41,7 @@ def menu_kb(sp_bot: TelegramBot) -> InlineKeyboardMarkup:
                 InlineKeyboardButton(f'Изменить мин. кол-во символов фильтрации рассылки({sp_bot.text_check_count})', callback_data='text_check_count'),
                 InlineKeyboardButton('Изменить каналы для обязательной подписки', callback_data='check_follow_channels'),
                 InlineKeyboardButton('Изменить id администраторов', callback_data='admin_ids'),
-                InlineKeyboardButton('Изменить сообщение о необходости подписки', callback_data='check_follow_text'),
+                InlineKeyboardButton('Изменить сообщение о необходимости подписки', callback_data='check_follow_text'),
                 InlineKeyboardButton('Изменить чат для логов', callback_data='change_log_chat'))
     return keyb
 
@@ -113,7 +113,7 @@ def change_follow_channels_kb() -> InlineKeyboardMarkup:
 def list_channels_kb(channels: list) -> InlineKeyboardMarkup:
     keyb = InlineKeyboardMarkup(row_width=1)
     for channel in channels:
-        keyb.add(InlineKeyboardButton(channel['username'], callback_data='channel'))
+        keyb.add(InlineKeyboardButton(channel['name'], url=f'https://t.me/{channel["username"]}'))
     keyb.add(InlineKeyboardButton('Назад', callback_data='check_follow_channels'))
     return keyb
 
@@ -121,7 +121,7 @@ def list_channels_kb(channels: list) -> InlineKeyboardMarkup:
 def delete_channels_kb(channels: list) -> InlineKeyboardMarkup:
     keyb = InlineKeyboardMarkup(row_width=1)
     for channel in channels:
-        keyb.add(InlineKeyboardButton('Удалить канал ' + channel['username'], callback_data=f'delete_channel_{channel["username"]}'))
+        keyb.add(InlineKeyboardButton('Удалить канал ' + channel['name'], callback_data=f'delete_channel_{channel["username"]}'))
     keyb.add(InlineKeyboardButton('Назад', callback_data='check_follow_channels'))
     return keyb
 
@@ -160,11 +160,22 @@ def get_list_channels() -> list:
     return data[0]['channels']
 
 
-def add_channel_to_list(channel: list) -> None:
-    channel_data = {
-        "username": channel[0],
-        "id": channel[1]
-    }
+def get_channel_info(channel_id, bot):
+    try:
+        # Получаем информацию о канале
+        chat = bot.get_chat(channel_id)
+        # Возвращаем ID, название и username канала
+        return {
+            'id': chat.id,
+            'name': chat.title,
+            'username': chat.username
+        }
+    except Exception as e:
+        # Если произошла ошибка, возвращаем сообщение об ошибке
+        return {'error': str(e)}
+
+def add_channel_to_list(channel, bot) -> None:
+    channel_data = get_channel_info(channel, bot)
     with open('admin_data.json') as f:
         data = json.load(f)
     data[0]['channels'].append(channel_data)

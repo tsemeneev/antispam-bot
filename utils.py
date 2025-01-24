@@ -59,7 +59,7 @@ def load_entities_from_json_file(filename='entities.json'):
 def get_update_spam_base(update: list) -> bool:
     admin_data = read_admin_data()
     admin_data[0]['spam_base'] = update
-    with open('admin_data.json', 'w') as f:
+    with open('admin_data.json', 'w',  encoding='utf-8') as f:
         json.dump(admin_data, f, indent=4, ensure_ascii=False)
             
 def check_frod(message: object) -> bool:
@@ -112,7 +112,7 @@ def write_msg(message: object) -> None:
         "message_id": message.message_id
     }
     
-    with open('messages.json', 'r+') as f:
+    with open('messages.json', 'r+', encoding='utf-8') as f:
         messages = json.load(f)
         messages.append(data)
         messages = [i for i in messages if (datetime.combine(datetime.min, now) - datetime.combine(datetime.min, datetime.strptime(i['time'], "%H:%M").time())).total_seconds() / 60 < 15]
@@ -122,7 +122,7 @@ def write_msg(message: object) -> None:
 
 def delete_msg_from_file(messages: list[dict]) -> None:
     for msg in messages:
-        with open('messages.json', 'r+') as f:
+        with open('messages.json', 'r+', encoding='utf-8') as f:
             messages = json.load(f)
             messages = [i for i in messages if i['message_id'] != msg['message_id']]
             f.seek(0)
@@ -130,19 +130,21 @@ def delete_msg_from_file(messages: list[dict]) -> None:
             f.truncate()
         
 def read_msg() -> list[dict]:
-    with open('messages.json', 'r') as f:
+    with open('messages.json', 'r', encoding='utf-8') as f:
         return json.load(f)
         
 def read_admin_data() -> list[dict]:
-    with open('admin_data.json', 'r') as f:
+    with open('admin_data.json', 'r', encoding='utf-8') as f:
         return json.load(f)
         
 def get_check_follow_channels(message: object, bot: object) -> bool:
     channels = read_admin_data()[0]['channels']
+    if len(channels) == 0:
+        return True
     print('tut')
     user_id = message.from_user.id
     try:
-        return all(bot.get_chat_member(chat_id=channel['id'].strip(), user_id=user_id).status != 'left' for channel in channels)
+        return all(bot.get_chat_member(chat_id=channel['id'], user_id=user_id).status != 'left' for channel in channels)
     except Exception as e:
         if e.result_json['error_code'] == 400 and 'user not found' in e.result_json['description']:
             print(e)
@@ -150,7 +152,7 @@ def get_check_follow_channels(message: object, bot: object) -> bool:
         
 
 def read_user_warnings() -> list[dict]:
-    with open('user_warnings.json', 'r') as f:
+    with open('user_warnings.json', 'r', encoding='utf-8') as f:
         return json.load(f)    
 
 # def check_follow_channels_message(message: object, bot: object) -> bool:
@@ -179,27 +181,73 @@ def read_user_warnings() -> list[dict]:
 
     
 def write_user_warnings(user_warnings: list[dict]) -> None:
-    with open('user_warnings.json', 'w') as f:
+    with open('user_warnings.json', 'w',  encoding='utf-8') as f:
         json.dump(user_warnings, f, indent=4, ensure_ascii=False)
         
         
 def send_follow_message(message: object, bot: object) -> None:
     data = read_admin_data()
     text = data[0]['text']
-    channel = data[0]['channels'][0]['username'][1:]
     entities = load_entities_from_json_file()
-    button = types.InlineKeyboardMarkup().add(types.InlineKeyboardButton(text='🔎 Перейти в канал', url=f'https://t.me/{channel}'))
-    sent = bot.send_message(message.chat.id, text=text, entities=entities, reply_markup=button)
+    buttons = types.InlineKeyboardMarkup()
+    for channel in data[0]['channels']:
+        buttons.add(types.InlineKeyboardButton(text=f'{channel['name']}', url=f'https://t.me/{channel["username"]}'))
+    sent = bot.send_message(message.chat.id, text=text, entities=entities, reply_markup=buttons, )
     time.sleep(15)
     bot.delete_message(chat_id=message.chat.id, message_id=sent.message_id)
     
 def set_log_chat_id(log_chat_id: int) -> None:
     data = read_admin_data()
     data[0]['log_chat_id'] = log_chat_id
-    with open('admin_data.json', 'w') as f:
+    with open('admin_data.json', 'w', encoding='utf-8') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
         
 
 def get_log_chat_id() -> int:
     data = read_admin_data()
     return data[0]['log_chat_id']
+
+def click_spam_base(value):
+    with open('admin_data.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    data[0]['spam_base_'] = value
+    with open('admin_data.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        
+def click_resend(value):
+    with open('admin_data.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    data[0]['resend'] = value
+    with open('admin_data.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        
+def click_hidden_text(value):
+    with open('admin_data.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    data[0]['hidden_text'] = value
+    with open('admin_data.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        
+        
+def click_frod(value):
+    with open('admin_data.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    data[0]['frod'] = value
+    with open('admin_data.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        
+        
+def click_urls(value):
+    with open('admin_data.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    data[0]['urls'] = value
+    with open('admin_data.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+        
+        
+def click_text_check_count(value):
+    with open('admin_data.json', 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    data[0]['text_check_count'] = value
+    with open('admin_data.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
